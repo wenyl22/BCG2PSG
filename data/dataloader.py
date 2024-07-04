@@ -48,7 +48,7 @@ class MyDataProvider(DataProvider[Path]):
                 with np.load(f"{data_root}/{src}/psg_quality_ecg_ECG II.npz") as f:
                     ecg_quality = f["quality"]
                     ecg_quality_freq = f["fs"]
-                for l in range(0, int(len(bcg_quality)//bcg_quality_freq) - 100, 1000):
+                for l in range(0, int(len(bcg_quality)//bcg_quality_freq) - 100, 50):
                     r = l + 10
                     # bcg_q.append(np.mean(bcg_quality[int(l * bcg_quality_freq) : int(r * bcg_quality_freq)]))
                     if np.mean(bcg_quality[int(l * bcg_quality_freq) : int(r * bcg_quality_freq)]) < 0.6:
@@ -60,11 +60,24 @@ class MyDataProvider(DataProvider[Path]):
                     bcg = nk.signal_filter(bcg, sampling_rate=bcg_freq.item(), lowcut=3, highcut=11).astype(np.float32)
                     bcg = zscore(bcg)
                     ecg = ecg_feature[l * ecg_freq : r * ecg_freq].astype(np.float32)
-                    ecg = nk.ecg_clean(ecg, sampling_rate = ecg_freq.item())
                     ecg = nk.signal_resample(ecg, desired_length = len(bcg))
-                    ecg, _ = nk.ecg_invert(ecg, sampling_rate = ecg_freq.item())
-                    ecg = nk.signal_filter(ecg, sampling_rate=ecg_freq.item(), lowcut=0, highcut=20).astype(np.float32)
+                    ecg = nk.ecg_clean(ecg, sampling_rate = bcg_freq.item())
+                    ecg = nk.signal_filter(ecg, sampling_rate=bcg_freq.item(), lowcut=3, highcut=11).astype(np.float32)
+                    ecg, _ = nk.ecg_invert(ecg, sampling_rate = bcg_freq.item())
+                    ecg, _ = nk.ecg_invert(ecg, sampling_rate = bcg_freq.item())
+                    assert(_ == 0)
                     ecg = zscore(ecg)
+                    # plt.figure()
+                    # plt.subplot(2, 1, 1) 
+                    # plt.plot(bcg, label='BCG')
+                    # plt.legend()
+                    # plt.title('BCG Data')
+                    # plt.subplot(2, 1, 2)  
+                    # plt.plot(ecg, label='ECG')
+                    # plt.legend()
+                    # plt.title('ECG Data')
+                    # plt.tight_layout()
+                    # plt.savefig("data.png")
                     # save bcg and ecg
                     np.save(f"{data_root}/{src}/{l}_bcg.npy", bcg)
                     np.save(f"{data_root}/{src}/{l}_ecg.npy", ecg)

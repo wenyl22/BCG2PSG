@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
+from torchaudio.transforms import Spectrogram
+import neurokit2 as nk
 class BasicBlock(nn.Module):
     def __init__(self, in_c, out_c, stride):
         super(BasicBlock, self).__init__()
@@ -20,10 +22,10 @@ class BasicBlock(nn.Module):
         init.kaiming_normal_(self.conv1.weight)
         init.kaiming_normal_(self.conv2.weight)
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = nn.GELU()(self.bn1(self.conv1(x)))
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
-        out = F.relu(out)
+        out = nn.GELU()(out)
         return out
 
 
@@ -36,7 +38,7 @@ class ResNet(nn.Module):
             mult = nf * (2 ** i)
             self.layers += [nn.Conv1d(mult, mult * 2, 3, 2, 1, bias=False)]
             self.layers += [nn.BatchNorm1d(mult * 2)]
-            self.layers += [nn.ReLU(True)]
+            self.layers += [nn.GELU()]
         n_blocks = 6
         nf_ = nf * (2 ** n_downsample)
         for i in range(n_blocks):
@@ -45,7 +47,7 @@ class ResNet(nn.Module):
             mult = nf * (2 ** (n_downsample - i - 1))
             self.layers += [nn.ConvTranspose1d(mult * 2, mult, 3, 2, 1, 1, bias=False)]
             self.layers += [nn.BatchNorm1d(mult)]
-            self.layers += [nn.ReLU(True)]
+            self.layers += [nn.GELU()]
         self.layers += [nn.Conv1d(nf, 1, 7, 1, 3, bias=False)]
         self.model = nn.Sequential(*self.layers)
         for m in self.modules():
@@ -60,4 +62,4 @@ class ResNet(nn.Module):
         input = batch["input"].to("cuda").unsqueeze(1)
         target = batch["target"].to("cuda").unsqueeze(1)
         prediction = self(input)
-        return F.mse_loss(prediction, target).sum()
+        return nn.MSELoss()(prediction, target)
