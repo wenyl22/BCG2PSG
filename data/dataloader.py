@@ -14,17 +14,17 @@ from data.datamodule import BasicDataModule
 from data.dataprovider import DataProvider
 from data.utils import random_split
 import matplotlib.pyplot as plt
-
+from data.preprocess import Preprocess
 
 SAMPLE_RATE = 128
-
-
+ 
 class MyDataProvider(DataProvider[Path]):
     def __init__(self, data_root: str, split: list[float], preprocess: bool | None = False) -> None:
         npzs = sorted(Path(data_root).glob("**/*.npz"))
         sources = sorted({self.get_source(item) for item in npzs})
         sources_split = random_split(sources, split)
         self.paths = []
+        mean_qualities = [[], [], []]
         if preprocess == False:
             for k in range(3):
                 self.paths.append(np.load(f"dataset/{k}_path.npy"))
@@ -33,57 +33,25 @@ class MyDataProvider(DataProvider[Path]):
             path = []
             for i, src in enumerate(src_split):
                 print(i, src)
-                if os.path.exists(f"{data_root}/{src}/psg_quality_ecg_ECG II.npz") == False:
-                    continue
-                with np.load(f"{data_root}/{src}/bcg_feature_raw.npz") as f:
-                    bcg_feature = f["raw"]
-                    bcg_freq = f["fs"]
-                with np.load(f"{data_root}/{src}/psg_feature_ecg_ECG II_raw.npz") as f:
-                    ecg_feature = f["ecg"]
-                    ecg_freq = f["fs"]
-
-                with np.load(f"{data_root}/{src}/bcg_quality_bio_freq.npz") as f:
-                    bcg_quality = f["quality"]
-                    bcg_quality_freq = f["fs"]
-                with np.load(f"{data_root}/{src}/psg_quality_ecg_ECG II.npz") as f:
-                    ecg_quality = f["quality"]
-                    ecg_quality_freq = f["fs"]
-                for l in range(0, int(len(bcg_quality)//bcg_quality_freq) - 100, 50):
-                    r = l + 10
-                    # bcg_q.append(np.mean(bcg_quality[int(l * bcg_quality_freq) : int(r * bcg_quality_freq)]))
-                    if np.mean(bcg_quality[int(l * bcg_quality_freq) : int(r * bcg_quality_freq)]) < 0.6:
-                        continue
-                    # ecg_q.append(np.mean(ecg_quality[int(l * ecg_quality_freq) : int(r * ecg_quality_freq)]))
-                    if np.mean(ecg_quality[int(l * ecg_quality_freq) : int(r * ecg_quality_freq)]) < 0.9:
-                        continue
-                    bcg = bcg_feature[l * bcg_freq : r * bcg_freq].astype(np.float32)
-                    bcg = nk.signal_filter(bcg, sampling_rate=bcg_freq.item(), lowcut=3, highcut=11).astype(np.float32)
-                    bcg = zscore(bcg)
-                    ecg = ecg_feature[l * ecg_freq : r * ecg_freq].astype(np.float32)
-                    ecg = nk.signal_resample(ecg, desired_length = len(bcg))
-                    ecg = nk.ecg_clean(ecg, sampling_rate = bcg_freq.item())
-                    ecg = nk.signal_filter(ecg, sampling_rate=bcg_freq.item(), lowcut=3, highcut=11).astype(np.float32)
-                    ecg, _ = nk.ecg_invert(ecg, sampling_rate = bcg_freq.item())
-                    ecg, _ = nk.ecg_invert(ecg, sampling_rate = bcg_freq.item())
-                    assert(_ == 0)
-                    ecg = zscore(ecg)
-                    # plt.figure()
-                    # plt.subplot(2, 1, 1) 
-                    # plt.plot(bcg, label='BCG')
-                    # plt.legend()
-                    # plt.title('BCG Data')
-                    # plt.subplot(2, 1, 2)  
-                    # plt.plot(ecg, label='ECG')
-                    # plt.legend()
-                    # plt.title('ECG Data')
-                    # plt.tight_layout()
-                    # plt.savefig("data.png")
-                    # save bcg and ecg
-                    np.save(f"{data_root}/{src}/{l}_bcg.npy", bcg)
-                    np.save(f"{data_root}/{src}/{l}_ecg.npy", ecg)
-                    path.append(f"{data_root}/{src}/{l}")
+                Preprocess(data_root, src, path, mean_qualities)
             self.paths.append(path)
             np.save(f"dataset/{k}_path.npy", np.array(path))
+        # plt.figure(figsize=(12, 4))
+
+        # plt.subplot(1, 3, 1)
+        # plt.hist(mean_qualities[0], bins=20, color='blue', alpha=0.7)
+        # plt.title('Mean BCG Quality')
+
+        # plt.subplot(1, 3, 2)
+        # plt.hist(mean_qualities[1], bins=20, color='red', alpha=0.7)
+        # plt.title('Mean ECG Quality')
+
+        # plt.subplot(1, 3, 3)
+        # plt.hist(mean_qualities[2], bins=20, color='green', alpha=0.7)
+        # plt.title('Mean RSP Quality')
+
+        # plt.tight_layout()
+        # plt.savefig("./data_quality.png")
     def get_source(self, item: Path) -> str:
         return item.parent.name
 
@@ -108,6 +76,7 @@ class MyDataProvider(DataProvider[Path]):
 class Sample(t.TypedDict):
     BCG: torch.Tensor
     ECG: torch.Tensor
+    RSP: torch.Tensor
 
 
 class MyDataset(Dataset[Sample]):
@@ -121,12 +90,18 @@ class MyDataset(Dataset[Sample]):
     def __getitem__(self, idx: int) -> Sample:
         bcg = np.load(f"{self.data_paths[idx]}_bcg.npy")
         ecg = np.load(f"{self.data_paths[idx]}_ecg.npy")
-        return Sample(BCG=torch.from_numpy(bcg.copy()), ECG=torch.from_numpy(ecg.copy()))
+        rsp = np.load(f"{self.data_paths[idx]}_rsp.npy")
+        return Sample(
+            BCG=torch.from_numpy(bcg.copy()), 
+            ECG=torch.from_numpy(ecg.copy()),
+            RSP=torch.from_numpy(rsp.copy())
+        )
 
 
 class Batch(t.TypedDict):
-    input: torch.Tensor
-    target: torch.Tensor
+    BCG: torch.Tensor
+    ECG: torch.Tensor
+    RSP: torch.Tensor
 
 
 class MyDataModule(BasicDataModule):
@@ -142,7 +117,12 @@ class MyDataModule(BasicDataModule):
     def _collate_fn(self, samples: list[Sample]) -> Batch:
         bcg = [sample["BCG"] for sample in samples]
         ecg = [sample["ECG"] for sample in samples]
-        return Batch(input=torch.stack(bcg), target=torch.stack(ecg)) 
+        rsp = [sample["RSP"] for sample in samples]
+        return Batch(
+            BCG=torch.stack(bcg, dim=0),
+            ECG=torch.stack(ecg, dim=0),
+            RSP=torch.stack(rsp, dim=0),
+        )
 if __name__ == "__main__":
     dataloader = MyDataModule(
         dataprovider={
@@ -162,19 +142,3 @@ if __name__ == "__main__":
     print(len(dataloader.train_dataloader()))
     print(len(dataloader.val_dataloader()))
     print(len(dataloader.test_dataloader()))
-    for batch in dataloader.train_dataloader():
-        bcg = batch["input"][0].numpy()
-        ecg = batch["target"][0].numpy()
-        plt.figure()
-        plt.subplot(2, 1, 1) 
-        plt.plot(bcg, label='BCG')
-        plt.legend()
-        plt.title('BCG Data')
-        plt.subplot(2, 1, 2)  
-        plt.plot(ecg, label='ECG')
-        plt.legend()
-        plt.title('ECG Data')
-        plt.tight_layout()
-        plt.savefig("data.png")
-        break
-

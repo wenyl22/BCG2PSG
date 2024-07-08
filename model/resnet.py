@@ -1,8 +1,7 @@
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.nn.init as init
-from torchaudio.transforms import Spectrogram
-import neurokit2 as nk
+from model.loss import SpecAmpLoss
+
 class BasicBlock(nn.Module):
     def __init__(self, in_c, out_c, stride):
         super(BasicBlock, self).__init__()
@@ -56,10 +55,11 @@ class ResNet(nn.Module):
             elif isinstance(m, nn.BatchNorm1d):
                 init.constant_(m.weight, 1)
                 init.constant_(m.bias, 0)
+        self.metrics = SpecAmpLoss(20000, 20000, power=2)
     def forward(self, x):
         return self.model(x)
     def get_loss(self, batch):
         input = batch["input"].to("cuda").unsqueeze(1)
         target = batch["target"].to("cuda").unsqueeze(1)
         prediction = self(input)
-        return nn.MSELoss()(prediction, target)
+        return self.metrics(prediction, target)
