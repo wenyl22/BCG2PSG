@@ -52,7 +52,7 @@ def Preprocess(data_root, src, path, qualities):
         mean_bcg_quality = np.mean(bcg_quality[int(l * bcg_quality_freq) : int(r * bcg_quality_freq)]) 
         mean_ecg_quality = np.mean(ecg_quality[int(l * ecg_quality_freq) : int(r * ecg_quality_freq)])
         mean_rsp_quality = np.mean(rsp_quality[int(l * rsp_quality_freq) : int(r * rsp_quality_freq)])
-        if mean_bcg_quality < 0.4 or mean_ecg_quality < 0.8 or mean_rsp_quality < 0.4:
+        if mean_bcg_quality < 0.6 or mean_rsp_quality < 0.5:
             continue
         # qualities[0].append(mean_bcg_quality)
         # qualities[1].append(mean_ecg_quality)

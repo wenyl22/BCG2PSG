@@ -1,4 +1,4 @@
 dataset/
 checkpoints/
-checkpoints2/
+results/
 */__pycache__/
