@@ -36,6 +36,8 @@ def main():
                     result = result[0].detach().cpu().numpy()
                     visualize(epoch, batch, result, args)
         val_losses.append(sum(val_loss) / len(val_loss))
+        if epoch % 10 == 9:
+            torch.save(model.state_dict(), f"./checkpoints/{args.name}/{epoch}.pth")
         if val_losses[-1] == min(val_losses):
             torch.save(model.state_dict(), f"./checkpoints/{args.name}/best.pth")
         visualize_loss(val_losses, "val", args)

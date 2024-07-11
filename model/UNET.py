@@ -265,6 +265,6 @@ class UNet(nn.Module):
             return x
     def get_loss(self, batch):
         bcg = batch["BCG"].unsqueeze(1).to("cuda")
-        rsp = batch["RSP"].to("cuda")
+        ecg = batch["ECG"].to("cuda")
         rec = self(bcg, classification=False)
-        return F.mse_loss(rec, rsp)
+        return F.mse_loss(rec, ecg)

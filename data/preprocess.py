@@ -52,14 +52,14 @@ def Preprocess(data_root, src, path, qualities):
         mean_bcg_quality = np.mean(bcg_quality[int(l * bcg_quality_freq) : int(r * bcg_quality_freq)]) 
         mean_ecg_quality = np.mean(ecg_quality[int(l * ecg_quality_freq) : int(r * ecg_quality_freq)])
         mean_rsp_quality = np.mean(rsp_quality[int(l * rsp_quality_freq) : int(r * rsp_quality_freq)])
-        if mean_bcg_quality < 0.6 or mean_rsp_quality < 0.5:
+        if mean_bcg_quality < 0.6 or mean_rsp_quality < 0.5 or mean_ecg_quality < 0.85:
             continue
         # qualities[0].append(mean_bcg_quality)
         # qualities[1].append(mean_ecg_quality)
         # qualities[2].append(mean_rsp_quality)
         rsp = rsp_feature[l * rsp_freq : r * rsp_freq].astype(np.float32)
         rsp = nk.signal_resample(rsp, desired_length = 3000)
-        rsp = nk.signal_filter(rsp, sampling_rate=100, lowcut=0.1, highcut = 25).astype(np.float32)
+        rsp = nk.signal_filter(rsp, sampling_rate=100, lowcut=0.05, highcut = 3).astype(np.float32)
         rsp = zscore(rsp)
 
         bcg = bcg_feature[l * bcg_freq : r * bcg_freq].astype(np.float32)
@@ -69,11 +69,10 @@ def Preprocess(data_root, src, path, qualities):
 
         ecg = ecg_feature[l * ecg_freq : r * ecg_freq].astype(np.float32)
         ecg = nk.signal_resample(ecg, desired_length = 3000)
-        ecg = nk.signal_filter(ecg, sampling_rate=100, lowcut=0.1, highcut=25).astype(np.float32)
-        ecg = nk.ecg_clean(ecg, sampling_rate = 100)
+        #ecg = nk.signal_filter(ecg, sampling_rate=100, lowcut=0.1, highcut=25).astype(np.float32)
+        ecg = nk.ecg_clean(ecg, sampling_rate = 100, method = "biosppy")
         ecg, _ = nk.ecg_invert(ecg, sampling_rate = 100)
         ecg = zscore(ecg)
-
         # visualize(bcg, ecg, rsp)
         np.save(f"{data_root}/{src}/{l}_rsp.npy", rsp)
         np.save(f"{data_root}/{src}/{l}_bcg.npy", bcg)

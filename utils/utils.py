@@ -37,10 +37,11 @@ def visualize_loss(loss, name, args):
     plt.ylabel(name + ' Loss')
     plt.tight_layout()
     plt.savefig(f"./checkpoints/{args.name}/{name}_loss.png")
+    plt.close()
 
 def visualize(epoch, batch, output, args, dir = "checkpoints"):
     bcg = batch["BCG"][0].numpy()
-    rsp = batch["RSP"][0].numpy()
+    ecg = batch["ECG"][0].numpy()
     rec = output
     if len(rec.shape) == 2:
         rec = rec[0]
@@ -52,7 +53,7 @@ def visualize(epoch, batch, output, args, dir = "checkpoints"):
     plt.title('BCG Data')
 
     plt.subplot(3, 1, 2)  
-    plt.plot(rsp, label='RSP')
+    plt.plot(ecg, label='ECG')
     plt.legend()
     plt.title('ECG Data')
 
@@ -64,3 +65,4 @@ def visualize(epoch, batch, output, args, dir = "checkpoints"):
     plt.tight_layout()
 
     plt.savefig(f"./{dir}/{args.name}/{epoch}.png")
+    plt.close()
