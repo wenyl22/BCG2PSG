@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from loss.wloss import WassersteinLoss
+from loss.pearson_loss import PearsonCorrelation
 
 def get_norm(name, num_channels, dim=None):
     if name == 'bn':
@@ -242,7 +243,7 @@ class UNet(nn.Module):
             dropout_rate=dropout_rate
         )
         self.classifier = nn.Linear(seq_len*n_freqs, n_class)
-
+        self.metric = F.mse_loss
     def forward(self, batch, print_shapes=False, classification=True):
 
         if isinstance(batch, dict):
@@ -265,6 +266,6 @@ class UNet(nn.Module):
             return x
     def get_loss(self, batch):
         bcg = batch["BCG"].unsqueeze(1).to("cuda")
-        ecg = batch["ECG"].to("cuda")
+        rsp = batch["RSP"].to("cuda")
         rec = self(bcg, classification=False)
-        return F.mse_loss(rec, ecg)
+        return self.metric(rec, rsp)

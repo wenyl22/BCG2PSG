@@ -3,12 +3,9 @@ import os
 sys.path[0] = os.path.join(os.path.dirname(__file__), '..')
 import numpy as np
 from pathlib import Path
-import random
 import torch
 from torch.utils.data import Dataset
 import typing as t
-from scipy.stats import zscore
-import neurokit2 as nk
 import numpy as np
 from data.datamodule import BasicDataModule
 from data.dataprovider import DataProvider
@@ -32,26 +29,28 @@ class MyDataProvider(DataProvider[Path]):
         for k, src_split in enumerate(sources_split):
             path = []
             for i, src in enumerate(src_split):
-                print(i, src)
+                print(i, src, len(src_split))
+                if not os.path.exists(f"dataset/bcg2psg/{src}"):
+                    os.makedirs(f"dataset/bcg2psg/{src}")
                 Preprocess(data_root, src, path, mean_qualities)
             self.paths.append(path)
             np.save(f"dataset/{k}_path.npy", np.array(path))
-        # plt.figure(figsize=(12, 4))
+        plt.figure(figsize=(12, 4))
 
-        # plt.subplot(1, 3, 1)
-        # plt.hist(mean_qualities[0], bins=20, color='blue', alpha=0.7)
-        # plt.title('Mean BCG Quality')
+        plt.subplot(1, 3, 1)
+        plt.hist(mean_qualities[0], bins=20, color='blue', alpha=0.7)
+        plt.title('Mean BCG Quality')
 
-        # plt.subplot(1, 3, 2)
-        # plt.hist(mean_qualities[1], bins=20, color='red', alpha=0.7)
-        # plt.title('Mean ECG Quality')
+        plt.subplot(1, 3, 2)
+        plt.hist(mean_qualities[1], bins=20, color='red', alpha=0.7)
+        plt.title('Mean ECG Quality')
 
-        # plt.subplot(1, 3, 3)
-        # plt.hist(mean_qualities[2], bins=20, color='green', alpha=0.7)
-        # plt.title('Mean RSP Quality')
+        plt.subplot(1, 3, 3)
+        plt.hist(mean_qualities[2], bins=20, color='green', alpha=0.7)
+        plt.title('Mean RSP Quality')
 
-        # plt.tight_layout()
-        # plt.savefig("./data_quality.png")
+        plt.tight_layout()
+        plt.savefig("./data_quality.png")
     def get_source(self, item: Path) -> str:
         return item.parent.name
 
@@ -127,7 +126,7 @@ if __name__ == "__main__":
     dataloader = MyDataModule(
         dataprovider={
             "class": "data.dataloader.MyDataProvider", # "class": MyDataProvider,
-            "data_root": "./dataset/bcg2psg",
+            "data_root": "/local_data/datasets/exported_parallel_data_v2/",
             "split": [0.90, 0.08, 0.02],
             "preprocess": True,
         },

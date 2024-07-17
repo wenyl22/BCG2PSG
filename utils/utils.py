@@ -14,8 +14,8 @@ def parse_argument(parser):
         os.makedirs("./results/" + args.name)
     dataloader = MyDataModule(
         dataprovider={
-            "class": "data.dataloader.MyDataProvider",
-            "data_root": "./dataset/bcg2psg",
+            "class": "data.dataloader.MyDataProvider", # "class": MyDataProvider,
+            "data_root": "/local_data/datasets/exported_parallel_data_v2/",
             "split": [0.90, 0.08, 0.02],
             "preprocess": False,
         },
@@ -24,7 +24,6 @@ def parse_argument(parser):
             "batch_size": 64,
             "num_workers": 4,
             "train": {"shuffle": True},
-            "eval": {"shuffle": True},
         },
     )
     return args, dataloader
@@ -41,7 +40,7 @@ def visualize_loss(loss, name, args):
 
 def visualize(epoch, batch, output, args, dir = "checkpoints"):
     bcg = batch["BCG"][0].numpy()
-    ecg = batch["ECG"][0].numpy()
+    rsp = batch["RSP"][0].numpy()
     rec = output
     if len(rec.shape) == 2:
         rec = rec[0]
@@ -53,9 +52,9 @@ def visualize(epoch, batch, output, args, dir = "checkpoints"):
     plt.title('BCG Data')
 
     plt.subplot(3, 1, 2)  
-    plt.plot(ecg, label='ECG')
+    plt.plot(rsp, label='RSP')
     plt.legend()
-    plt.title('ECG Data')
+    plt.title('RSP Data')
 
     plt.subplot(3, 1, 3)
     plt.plot(rec, label='REC')
