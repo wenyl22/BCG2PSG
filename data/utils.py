@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import Dataset, random_split as torch_random_split
 import torch.types
 import typing as t
+from typing import Union
 
 
 _T = t.TypeVar("_T")
@@ -18,8 +19,11 @@ class DummyDataset(Dataset[int]):
         return index
 
 
-def random_split(src: t.Iterable[_T], ratio: t.Sequence[int | float]) -> list[list[_T]]:
+def random_split(src: t.Iterable[_T], ratio: t.Sequence[Union[int, float]]) -> list[list[_T]]:
     src_list = list(src)
+    for i in range(len(ratio) - 1):
+        ratio[i] = int(len(src_list) * ratio[i])
+    ratio[-1] = len(src_list) - sum(ratio[:-1])
     subsets = torch_random_split(
         DummyDataset(len(src_list)),
         ratio,
@@ -40,7 +44,7 @@ def pad(x, max_len: int, pad_value: torch.types.Number = 0, dim: int = 0):
 
 def pad_batch(
     x: list[torch.Tensor],
-    max_len: int | None = None,
+    max_len: Union[int, None] = None,
     pad_value: torch.types.Number = 0,
     dim: int = 0,
 ):

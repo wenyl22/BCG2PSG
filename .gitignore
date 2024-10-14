@@ -1,4 +1,11 @@
-dataset/
-checkpoints/
-results/
-*/__pycache__/
+checkpoints
+results
+configs
+*/__pycache__
+pywt
+*.png
+*.sh
+*.txt
+quantum.py
+model/dit.py
+model/transformer.py

@@ -1,6 +1,5 @@
 import torch.nn as nn
 import torch.nn.init as init
-from model.loss import SpecAmpLoss
 
 class BasicBlock(nn.Module):
     def __init__(self, in_c, out_c, stride):
